@@ -73,13 +73,12 @@ class Python implements Serializable {
     }
     */
 	
-	private String copyResourceFromLibrary(String pathToResource, boolean isText) {
+	private void copyResourceFromLibrary(String pathToResource, boolean isText) {
 		def resourceContent = script.libraryResource(pathToResource)
 		if(isText) {
 			script.writeFile file: pathToResource, text: resourceContent
 		}  
 		//script.sh "chmod +x ${outputFile}"
-		return outputPath
 	}
 	
 	private String getFileNameFromPath (filePath) {

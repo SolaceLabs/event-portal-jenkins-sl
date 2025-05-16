@@ -18,7 +18,7 @@ import static com.lesfurets.jenkins.unit.global.lib.ProjectSource.projectSource
 import com.lesfurets.jenkins.unit.BasePipelineTest;
 import com.lesfurets.jenkins.unit.declarative.DeclarativePipelineTest
 
-public class SolaceEventPortalPushToRuntimeTest extends BasePipelineTest {//DeclarativePipelineTest {
+public class SolaceEventPortalPushToRuntimeTest extends DeclarativePipelineTest { //BasePipelineTest {//DeclarativePipelineTest {
     @Override
     @BeforeEach
     void setUp() {
@@ -49,7 +49,8 @@ public class SolaceEventPortalPushToRuntimeTest extends BasePipelineTest {//Decl
 	
 	@Test
 	void solaceEventPortalPushToRuntimeTest () {
-		runScript("Jenkinsfile")
+		runScript("test/resources/workspace/Jenkinsfile")
+		//runScript("Jenkinsfile")
 	}
 	
 }

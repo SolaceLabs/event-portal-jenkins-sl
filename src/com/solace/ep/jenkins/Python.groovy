@@ -55,7 +55,7 @@ class Python implements Serializable {
     
     def installDependencies() {
         //script.sh "pip3 install -r devrequirements.txt"
-		copyResourceFromLibrary("python/dependencies/install-dependencies.bat", "python/dependencies/")
+		copyResourceFromLibrary("python/dependencies/install-dependencies.bat", true)
     }
 	
 	/*
@@ -73,11 +73,11 @@ class Python implements Serializable {
     }
     */
 	
-	private String copyResourceFromLibrary(String pathToResource, String destFolder) {
+	private String copyResourceFromLibrary(String pathToResource, boolean isText) {
 		def resourceContent = script.libraryResource(pathToResource)
-		def fileName = getFileNameFromPath(pathToResource)
-		def outputPath = String.format("%s/%s", destFolder, fileName)
-		script.writeFile file: outputPath, text: resourceContent
+		if(isText) {
+			script.writeFile file: pathToResource, text: resourceContent
+		}  
 		//script.sh "chmod +x ${outputFile}"
 		return outputPath
 	}

@@ -229,6 +229,70 @@ def deploy_applications_to_runtime(token, broker_id, application_list):
         get_deployment_status_single_application_to_runtime(token, broker_id, app)
     return None
 
+
+def get_application_list_by_name(token, application_name, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/applications?pageSize=100&pageNumber=1&name={application_name}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(
+        f"Getting application list by name: {application_name}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting Application List by name: {application_name} failed! - error details: " + str(response.json()))
+
+    json_response = json.loads(response.text)
+    data = json_response.get('data')
+    if data is not None:
+        for record in data:
+            application.applicationTitle = record.get('name')
+            application.applicationId = record.get('id')
+            print(f"Application retrieved: {application}")
+
+    return None
+
+def get_application_version_by_name(token, version_name, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application.applicationId}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(f"Getting application versions for Application: {application.applicationTitle}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting application versions for application: {application.applicationTitle} failed! - error details: " + str(response.json()))
+
+    json_response = json.loads(response.text)
+    data = json_response.get('data')
+    if data is not None:
+        for record in data:
+            version = record.get('version')
+            if version == version_name:
+                application.applicationVersion = version
+                application.applicationVersionId = record.get('id')
+                application.applicationVersionName = record.get('displayName')
+                application.applicationStateId = record.get('stateId')
+                if application.applicationStateId == '1':
+                    application.applicationState = 'DRAFT'
+                elif application.applicationStateId == '2':
+                    application.applicationState = 'RELEASED'
+                else:
+                    application.applicationState = 'X'
+
+    print(f"Application retrieved: {application}")
+
+    if application.applicationVersion is None:
+        raise Exception(f"Could find an application versions for application: {application.applicationTitle} with version name: {version_name} failed! - error details: " + str(response.json()))
+
+    return None
+
 # Main
 def main(argv):
 
@@ -236,19 +300,36 @@ def main(argv):
     parser = argparse.ArgumentParser(description="Push Applications to Broker Runtime")
     parser.add_argument("-token", type=str, required=True, help="Event Portal Auth Token")
     parser.add_argument("-brokerId", type=str, required=True, help="Runtime broker ID")
+    parser.add_argument("-action", type=str, required=True, help="deploy/undeploy")
+
+    parser.add_argument("-applicationName", type=str, required=True, help="Application Name (case sensitive)")
+    parser.add_argument("-applicationVersion", type=str, required=True, help="Application Version (case sensitive)")
     parser.add_argument("-clientUsername", type=str, required=True, help="Client username")
     parser.add_argument("-clientAuthorizationGroupName", type=str, required=True, help="Client Authorization group")
 
     args = parser.parse_args()
 
-    #scan current workspace to get all the yaml files and read them
-    application_list = sepi.get_applications_from_yaml_files()
+    requested_app = sepi.EventPortalApplication(None, None, None,
+                                                None, None, None, None)
 
-    i = 1
-    for app in application_list:
-        app.clientUserName = args.clientUsername + "_" + "{:03d}".format(i)
-        app.clientAuthorizationGroupName = args.clientAuthorizationGroupName  + "_" + "{:03d}".format(i)
-        i = i +1
+
+
+    get_application_list_by_name(args.token, args.applicationName, requested_app)
+    get_application_version_by_name(args.token, args.applicationVersion, requested_app)
+
+    application_list = []
+
+    #scan current workspace to get all the yaml files and read them
+    #application_list = sepi.get_applications_from_yaml_files()
+
+    #i = 1
+    #for app in application_list:
+    #    app.clientUserName = args.clientUsername + "_" + "{:03d}".format(i)
+    #    app.clientAuthorizationGroupName = args.clientAuthorizationGroupName  + "_" + "{:03d}".format(i)
+    #    i = i +1
+
+    print(requested_app)
+    application_list.append(requested_app)
 
     # deploy applications to runtime broker
     deploy_applications_to_runtime(args.token, args.brokerId, application_list)

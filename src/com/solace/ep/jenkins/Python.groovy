@@ -87,10 +87,13 @@ class Python implements Serializable {
 
 		script.echo "Copying required scripts...'"
 		copyResourceFromLibrary("python/scripts/solace_ep_integration.py", true)
+		script.sh "chmod +x python/scripts/solace_ep_integration.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-list-messaging-services.py", true)
+		script.sh "chmod +x python/scripts/solace_ep_integration.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-list-modeled-event-meshes.py", true)
+		script.sh "chmod +x python/scripts/solace_ep_integration.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-push-to-runtime.py", true)
-				
+		script.sh "chmod +x python/scripts/solace_ep_integration.py"
     }
 	
 	def pushApplicationToRuntime (String token, String brokerId, String clientUsername, String clientAuthorizationGroupName) {

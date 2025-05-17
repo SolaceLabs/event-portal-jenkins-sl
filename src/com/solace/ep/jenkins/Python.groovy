@@ -118,20 +118,6 @@ class Python implements Serializable {
 		script.echo "Output:  ${commandOutput}"
 	}
 	
-	/*
-    def lintCheck()
-    {
-        script.sh "python3 -m flake8 ."
-    }
-    def pytestCheck()
-    {
-        script.sh "python3 -m pytest ."
-    }
-    def IncrementVersion(String type)
-    {
-        script.sh "python3 utils/versioner.py --${type}"
-    }
-    */
 	
 	private void copyResourceFromLibrary(String pathToResource, boolean isText) {
 		if(isText) {

@@ -309,6 +309,8 @@ def main(argv):
 
     args = parser.parse_args()
 
+    print(f"Arguments: {args}")
+
     requested_app = sepi.EventPortalApplication(None, None, None,
                                                 None, None, None, None)
 

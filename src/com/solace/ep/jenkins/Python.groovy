@@ -103,10 +103,10 @@ class Python implements Serializable {
 	
 	private void copyResourceFromLibrary(String pathToResource, boolean isText) {
 		if(isText) {
-			def resourceContent = script.libraryResource(pathToResource)
+			def resourceContent = script.libraryResource resource: pathToResource
 			script.writeFile file: pathToResource, text: resourceContent
 		} else {
-			def resourceContent = script.libraryResource(pathToResource, "Base64")
+			def resourceContent = script.libraryResource resource: pathToResource, encoding: "Base64"
 			script.writeFile file: pathToResource, text: resourceContent, encoding: "Base64"
 			
 		}

@@ -84,8 +84,36 @@ class Python implements Serializable {
 		}
 		
 		script.echo "Output:  ${commandOutput}"
-		
+
+		script.echo "Copying required scripts...'"
+		copyResourceFromLibrary("python/scripts/solace_ep_integration.py", true)
+		copyResourceFromLibrary("python/scripts/solace-ep-list-messaging-services.py", true)
+		copyResourceFromLibrary("python/scripts/solace-ep-list-modeled-event-meshes.py", true)
+		copyResourceFromLibrary("python/scripts/solace-ep-push-to-runtime.py", true)
+				
     }
+	
+	def pushApplicationToRuntime (String token, String brokerId, String clientUsername, String clientAuthorizationGroupName) {
+		
+		String params = "-token eyJhbGciOiJSUzI1NiIsImtpZCI6Im1hYXNfcHJvZF8yMDIwMDMyNiIsInR5cCI6IkpXVCJ9.eyJvcmciOiJzb2xhY2V1c2VycyIsIm9yZ1R5cGUiOiJFTlRFUlBSSVNFIiwic3ViIjoiOXV6MjUyb2MybWkiLCJwZXJtaXNzaW9ucyI6IkFBQUFBSUFrQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUlBd0NBTUFJQURnTC8vL2c1WWZCUVlBQUVNRFk0WTVNd01CQVBoZkJnQUkiLCJhcGlUb2tlbklkIjoiMDZxODNiMTN0OXIiLCJpc3MiOiJTb2xhY2UgQ29ycG9yYXRpb24iLCJpYXQiOjE3NDY2NDMzODh9.O3Olpmp5So5k_1w0ZlmjZD60T088K9I6pnyWeWhhGZgcR1W2GewjHc4G4kzSNTPTImNHIhCvg2nc9xsS5EBA5fD5B93a4Z1iwaNtVwMjcXJ92sBExGGria1I2JgL2yQZ3Hal4MfSTb_CNfUYK1xiBd-MqweBjBf1m12rw8utVPuUNIvD_IVjIK0Gz3R-_hGcDIRcn6TJZl7ALAF6CX5AY3Des2NyEmfiShwiDPxRFsxga40ghxqahs1FLoWVAU7gCVboIh_tjz6U7j7xVL1Y001k6u0_dcab-ghYPDLIdqjLvzuq5j4s-BN3abiJhrncTjEeBoQGkC9ltLJt8VtxJw -brokerId wy6s3djof41 -clientUsername incident_manager -clientAuthorizationGroupName IncidentManagerOAuth"
+		
+		def commandOutput
+		
+		if(this.script.isUnix()) {
+			commandOutput = script.sh (
+				script: 'sh python3 python/scripts/solace-ep-push-to-runtime.py ' + params,
+				returnStdout: true
+			).trim()
+
+		} else {
+			commandOutput = script.sh (
+				script: 'sh python python\\scripts\\solace-ep-push-to-runtime.py ' + params
+				returnStdout: true
+			).trim()
+		}
+		
+		script.echo "Output:  ${commandOutput}"
+	}
 	
 	/*
     def lintCheck()

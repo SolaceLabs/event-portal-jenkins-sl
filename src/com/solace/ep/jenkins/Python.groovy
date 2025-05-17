@@ -104,7 +104,7 @@ class Python implements Serializable {
 		
 		if(this.script.isUnix()) {
 			commandOutput = script.sh (
-				script: '. env/bin/python3 python/scripts/solace-ep-push-to-runtime.py ' + params,
+				script: 'env/bin/python3 python/scripts/solace-ep-push-to-runtime.py ' + params,
 				returnStdout: true
 			).trim()
 

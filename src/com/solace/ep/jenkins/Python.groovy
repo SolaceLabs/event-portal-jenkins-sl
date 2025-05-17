@@ -57,6 +57,7 @@ class Python implements Serializable {
         
 		script.echo "Copying required dependencies...'"
 		copyResourceFromLibrary("python/dependencies/install-dependencies.bat", true)
+		copyResourceFromLibrary("python/dependencies/install-dependencies.sh", true)
 		copyResourceFromLibrary("python/dependencies/lib/certifi-2025.4.26-py3-none-any.whl", false)
 		copyResourceFromLibrary("python/dependencies/lib/charset_normalizer-3.4.2-py3-none-any.whl", false)
 		copyResourceFromLibrary("python/dependencies/lib/idna-3.10-py3-none-any.whl", false)
@@ -71,7 +72,7 @@ class Python implements Serializable {
 		
 		if(this.script.isUnix()) {
 			commandOutput = script.sh (
-				script: '. env/bin/activate',
+				script: 'sh python/dependencies/install-dependencies.sh',
 				returnStdout: true
 			).trim()
 

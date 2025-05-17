@@ -54,8 +54,36 @@ class Python implements Serializable {
     }
     
     def installDependencies() {
-        //script.sh "pip3 install -r devrequirements.txt"
+        
+		script.echo "Copying required dependencies...'"
 		copyResourceFromLibrary("python/dependencies/install-dependencies.bat", true)
+		copyResourceFromLibrary("python/dependencies/lib/certifi-2025.4.26-py3-none-any.whl", false)
+		copyResourceFromLibrary("python/dependencies/lib/charset_normalizer-3.4.2-py3-none-any.whl", false)
+		copyResourceFromLibrary("python/dependencies/lib/idna-3.10-py3-none-any.whl", false)
+		copyResourceFromLibrary("python/dependencies/lib/pip-25.1.1-py3-none-any.whl", false)
+		copyResourceFromLibrary("python/dependencies/lib/requests-2.32.3-py3-none-any.whl", false)
+		copyResourceFromLibrary("python/dependencies/lib/urllib3-2.4.0-py3-none-any.whl", false)
+		
+		script.echo "All dependencies copied'"
+		script.echo "Installing dependencies.."
+
+		def commandOutput
+		
+		if(this.script.isUnix()) {
+			commandOutput = script.sh (
+				script: '. env/bin/activate',
+				returnStdout: true
+			).trim()
+
+		} else {
+			commandOutput = script.sh (
+				script: '.\\python\\dependencies\\install-dependencies.bat',
+				returnStdout: true
+			).trim()
+		}
+		
+		script.echo "Output:  ${commandOutput}"
+		
     }
 	
 	/*
@@ -74,11 +102,14 @@ class Python implements Serializable {
     */
 	
 	private void copyResourceFromLibrary(String pathToResource, boolean isText) {
-		def resourceContent = script.libraryResource(pathToResource)
 		if(isText) {
+			def resourceContent = script.libraryResource(pathToResource)
 			script.writeFile file: pathToResource, text: resourceContent
-		}  
-		//script.sh "chmod +x ${outputFile}"
+		} else {
+			def resourceContent = script.libraryResource(pathToResource, "Base64")
+			script.writeFile file: pathToResource, text: resourceContent, encoding: "Base64"
+			
+		}
 	}
 	
 	private String getFileNameFromPath (filePath) {

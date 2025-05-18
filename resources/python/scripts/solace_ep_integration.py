@@ -205,6 +205,31 @@ def get_broker_id_by_name(token, broker_name):
     print(f"BrokerId retrieved: {broker_id}")
     return broker_id
 
+def get_broker_service_id_by_name(token, broker_name):
+    url = "https://api.solace.cloud/api/v2/missionControl/eventBrokerServices?customAttributes=name%3D%3DIFBI_QA&pageNumber=1&pageSize=100"
+
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(f"Getting Broker Service Id by Name: {broker_name}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting Broker Service Id by Name: {broker_name} failed! - error details: " + str(response.json()))
+
+    broker_service_id = None
+
+    json_response = json.loads(response.text)
+    data = json_response.get('data')
+    if data is not None:
+        for record in data:
+            broker_service_id = record.get('id')
+
+    print(f"BrokerServiceId retrieved: {broker_service_id}")
+    return broker_service_id
+
 def get_application_version(token, application):
     url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application.applicationId}&ids={application.applicationVersionId}"
 
@@ -236,6 +261,26 @@ def get_application_client_profile(token, application):
         raise Exception(f"Getting client profile for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
 
     return response.text
+
+def create_application_client_profile(token, broker_service_id, client_profile_name):
+    url = f"https://api.solace.cloud/api/v2/missionControl/eventBrokerServices/{broker_service_id}/clientProfiles"
+
+    payload = {
+        "name": f"{client_profile_name}",
+    }
+    headers = {
+        "accept": "application/json",
+        "content-type": "application/json",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(f"Creating client profile with name: {client_profile_name}")
+    response = requests.post(url, json=payload, headers=headers)
+
+    if response.status_code != 200 or response.status_code != 202:
+        raise Exception(f"Creation of client profile with name: {client_profile_name} failed! - error details: " + str(response.json()))
+
+    print(response.text)
 
 def get_application_authorization_group(token, broker_id, application):
     url = f"https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceAuthorizationGroups?pageSize=100&pageNumber=1&eventBrokerIds={broker_id}&entityIds={application.applicationId}"

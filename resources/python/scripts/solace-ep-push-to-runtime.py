@@ -35,17 +35,24 @@ def validate_application_version(token, application):
 
     return None
 
-def validate_application_client_profile(token, application):
+def validate_application_client_profile(token, broker_service_id, application):
     txt_response = sepi.get_application_client_profile(token, application)
     pretty_json = sepi.to_pretty_json(txt_response)
     print(pretty_json)
 
+    client_profile_name = None
     json_response = json.loads(txt_response)
     data = json_response.get('data')
     if data is not None:
         if len(data) == 0:
             raise Exception(
-                f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not have a Client Profile! Create one before continue. Aborting!")
+                f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not have a Client Profile! Create one in Event Portal Designer before continue. Aborting!")
+        else:
+            record = data[0]
+            if record is not None:
+                client_profile_name = record.get('identifier')
+
+    sepi.create_application_client_profile(token, broker_service_id, client_profile_name)
     return None
 
 def validate_application_authorization_group(token, broker_id, application):
@@ -105,13 +112,13 @@ def get_deployment_status_single_application_to_runtime(token, broker_id, app):
 
     return None
 
-def deploy_applications_to_runtime(token, broker_id, application_list):
+def deploy_applications_to_runtime(token, broker_service_id, broker_id, application_list):
     # Validate that the application with that version id exists in EP designer
     for app in application_list:
         validate_application_version(token, app)
 
     for app in application_list:
-        validate_application_client_profile(token, app)
+        validate_application_client_profile(token, broker_service_id, app)
 
     for app in application_list:
         validate_application_authorization_group(token, broker_id, app)
@@ -164,9 +171,14 @@ def main(argv):
     requested_app = sepi.EventPortalApplication(None, None, None,
                                                 None, None, None, None)
 
+    # Get Broker ID
     broker_id = sepi.get_broker_id_by_name(args.token, args.brokerName)
     if broker_id is None:
         raise Exception(f"Could not find an broker with name: {args.brokerName}")
+
+    broker_service_id = sepi.get_broker_service_id_by_name(args.token, args.brokerName)
+    if broker_service_id is None:
+        raise Exception(f"Could not find an broker service with name: {args.brokerName}")
 
     # Get Application by Name
     sepi.get_application_list_by_name(args.token, args.applicationName, requested_app)
@@ -197,7 +209,7 @@ def main(argv):
 
     if args.action == ACTION_DEPLOY:
         # deploy applications to runtime broker
-        deploy_applications_to_runtime(args.token, broker_id, application_list)
+        deploy_applications_to_runtime(args.token, broker_service_id, broker_id, application_list)
     elif args.action == ACTION_UNDEPLOY:
         undeploy_applications_to_runtime(args.token, broker_id, application_list)
 

@@ -178,6 +178,10 @@ def main(argv):
     if requested_app.applicationVersion is None:
         raise Exception(f"Could not find an application versions for application with name: {requested_app.applicationTitle} and version name: {args.applicationVersion}")
 
+    # Set Authorization parameters
+    requested_app.clientUserName = args.clientUsername
+    requested_app.clientAuthorizationGroupName = args.clientAuthorizationGroupName
+
     print(requested_app)
 
     #scan current workspace to get all the yaml files and read them

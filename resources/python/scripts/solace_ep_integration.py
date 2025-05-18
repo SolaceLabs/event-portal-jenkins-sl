@@ -189,6 +189,22 @@ def get_application_version_by_name(token, version_name, application):
     print(f"Application retrieved: {application}")
     return None
 
+def get_broker_id_by_name(token, broker_name):
+    response = get_messaging_services(token)
+
+    broker_id = None
+
+    json_response = json.loads(response)
+    data = json_response.get('data')
+    if data is not None:
+        for record in data:
+            t_broker_name = record.get('name')
+            if t_broker_name == broker_name:
+                broker_id = record.get('id')
+
+    print(f"BrokerId retrieved: {broker_id}")
+    return broker_id
+
 def get_application_version(token, application):
     url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application.applicationId}&ids={application.applicationVersionId}"
 

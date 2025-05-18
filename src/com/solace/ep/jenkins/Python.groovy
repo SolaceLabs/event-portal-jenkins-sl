@@ -99,16 +99,15 @@ class Python implements Serializable {
 	def pushApplicationToRuntime (HashMap config) {
 		
 		String token = config.get("token")
-		String brokerId = "wy6s3djof41"
-		
+		String brokerName = config.get("brokerName")
 		String action = config.get("action")
 		String applicationName = config.get("applicationName")
 		String applicationVersion = config.get("applicationVersion")
 		String clientUsername = config.get("clientUsername")
 		String clientAuthorizationGroupName = config.get("clientAuthorizationGroupName")
 		
-		String params = String.format("-token %s -brokerId \"%s\" -action \"%s\" -applicationName \"%s\" -applicationVersion \"%s\" -clientUsername \"%s\" -clientAuthorizationGroupName \"%s\"", 
-				token, brokerId, action, applicationName, applicationVersion, clientUsername, clientAuthorizationGroupName) 
+		String params = String.format("-token %s -brokerName \"%s\" -action \"%s\" -applicationName \"%s\" -applicationVersion \"%s\" -clientUsername \"%s\" -clientAuthorizationGroupName \"%s\"", 
+				token, brokerName, action, applicationName, applicationVersion, clientUsername, clientAuthorizationGroupName) 
 		
 		def commandOutput
 		

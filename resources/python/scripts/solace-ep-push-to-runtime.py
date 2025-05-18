@@ -149,7 +149,7 @@ def main(argv):
     # Parse parameters
     parser = argparse.ArgumentParser(description="Push Applications to Broker Runtime")
     parser.add_argument("-token", type=str, required=True, help="Event Portal Auth Token")
-    parser.add_argument("-brokerId", type=str, required=True, help="Runtime broker ID")
+    parser.add_argument("-brokerName", type=str, required=True, help="Runtime broker Name")
     parser.add_argument("-action", type=str, required=True, help="deploy/undeploy")
 
     parser.add_argument("-applicationName", type=str, required=True, help="Application Name (case sensitive)")
@@ -163,6 +163,10 @@ def main(argv):
 
     requested_app = sepi.EventPortalApplication(None, None, None,
                                                 None, None, None, None)
+
+    broker_id = sepi.get_broker_id_by_name(args.token, args.brokerName)
+    if broker_id is None:
+        raise Exception(f"Could not find an broker with name: {args.brokerName}")
 
     # Get Application by Name
     sepi.get_application_list_by_name(args.token, args.applicationName, requested_app)
@@ -189,9 +193,9 @@ def main(argv):
 
     if args.action == ACTION_DEPLOY:
         # deploy applications to runtime broker
-        deploy_applications_to_runtime(args.token, args.brokerId, application_list)
+        deploy_applications_to_runtime(args.token, broker_id, application_list)
     elif args.action == ACTION_UNDEPLOY:
-        undeploy_applications_to_runtime(args.token, args.brokerId, application_list)
+        undeploy_applications_to_runtime(args.token, broker_id, application_list)
 
     return None
 

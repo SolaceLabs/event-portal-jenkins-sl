@@ -206,7 +206,7 @@ def get_broker_id_by_name(token, broker_name):
     return broker_id
 
 def get_broker_service_id_by_name(token, broker_name):
-    url = "https://api.solace.cloud/api/v2/missionControl/eventBrokerServices?customAttributes=name%3D%3DIFBI_QA&pageNumber=1&pageSize=100"
+    url = f"https://api.solace.cloud/api/v2/missionControl/eventBrokerServices?customAttributes=name%3D%3D{broker_name}&pageNumber=1&pageSize=100"
 
     headers = {
         "accept": "application/json",
@@ -244,6 +244,23 @@ def get_application_version(token, application):
     if response.status_code != 200:
         raise Exception(f"Validation for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
 
+    return response.text
+
+def get_application_async_api_specification(token, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions/{application.applicationVersionId}/asyncApi?format=json&showVersioning=true&includedExtensions=all&asyncApiVersion=2.5.0"
+
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(
+        f"Getting AsyncAPI specification for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState}")
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Getting AsyncAPI specification for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    print(response.text)
     return response.text
 
 def get_application_client_profile(token, application):

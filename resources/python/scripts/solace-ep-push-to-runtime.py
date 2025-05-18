@@ -35,6 +35,21 @@ def validate_application_version(token, application):
 
     return None
 
+def write_application_async_api_specification(token, application):
+    txt_response = sepi.get_application_async_api_specification(token, application)
+    pretty_json = sepi.to_pretty_json(txt_response)
+    print(pretty_json)
+
+    async_api_file = f"{application.applicationTitle}_v{application.applicationVersion}.json"
+    async_api_file = async_api_file.replace(" ", "_")
+
+    logger.info(
+        f"Writing AsyncAPI specification for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} to file: {async_api_file}")
+    with open(async_api_file, "w") as file:
+        file.write(pretty_json)
+
+    return None
+
 def validate_application_client_profile(token, broker_service_id, application):
     txt_response = sepi.get_application_client_profile(token, application)
     pretty_json = sepi.to_pretty_json(txt_response)
@@ -166,7 +181,8 @@ def main(argv):
 
     args = parser.parse_args()
 
-    print(f"Arguments: {args}")
+    print(f"Arguments: Token: ***, brokerName: {args.brokerName}, action: {args.action} " +
+          f"applicationName: {args.applicationName}, applicationVersion: {args.applicationVersion}, clientUsername: {args.clientUsername}, clientAuthorizationGroupName: {args.clientAuthorizationGroupName}")
 
     requested_app = sepi.EventPortalApplication(None, None, None,
                                                 None, None, None, None)
@@ -195,6 +211,9 @@ def main(argv):
     requested_app.clientAuthorizationGroupName = args.clientAuthorizationGroupName
 
     print(requested_app)
+
+    # Write Async API spec to json file
+    write_application_async_api_specification(args.token, requested_app)
 
     #scan current workspace to get all the yaml files and read them
     #application_list = sepi.get_applications_from_yaml_files()

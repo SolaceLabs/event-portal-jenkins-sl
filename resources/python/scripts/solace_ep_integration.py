@@ -277,7 +277,7 @@ def create_application_client_profile(token, broker_service_id, client_profile_n
     logger.info(f"Creating client profile with name: {client_profile_name}")
     response = requests.post(url, json=payload, headers=headers)
 
-    if response.status_code != 200 or response.status_code != 202:
+    if response.status_code != 200 or response.status_code != 202 or response.status_code != 400:
         raise Exception(f"Creation of client profile with name: {client_profile_name} failed! - error details: " + str(response.json()))
 
     print(response.text)

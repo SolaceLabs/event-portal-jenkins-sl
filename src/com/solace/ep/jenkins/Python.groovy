@@ -96,9 +96,18 @@ class Python implements Serializable {
 		script.sh "chmod +x python/scripts/solace_ep_integration.py"
     }
 	
-	def pushApplicationToRuntime (String token, String brokerId, String clientUsername, String clientAuthorizationGroupName) {
+	def pushApplicationToRuntime (HashMap config) {
 		
-		String params = "-token eyJhbGciOiJSUzI1NiIsImtpZCI6Im1hYXNfcHJvZF8yMDIwMDMyNiIsInR5cCI6IkpXVCJ9.eyJvcmciOiJzb2xhY2V1c2VycyIsIm9yZ1R5cGUiOiJFTlRFUlBSSVNFIiwic3ViIjoiOXV6MjUyb2MybWkiLCJwZXJtaXNzaW9ucyI6IkFBQUFBSUFrQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUlBd0NBTUFJQURnTC8vL2c1WWZCUVlBQUVNRFk0WTVNd01CQVBoZkJnQUkiLCJhcGlUb2tlbklkIjoiMDZxODNiMTN0OXIiLCJpc3MiOiJTb2xhY2UgQ29ycG9yYXRpb24iLCJpYXQiOjE3NDY2NDMzODh9.O3Olpmp5So5k_1w0ZlmjZD60T088K9I6pnyWeWhhGZgcR1W2GewjHc4G4kzSNTPTImNHIhCvg2nc9xsS5EBA5fD5B93a4Z1iwaNtVwMjcXJ92sBExGGria1I2JgL2yQZ3Hal4MfSTb_CNfUYK1xiBd-MqweBjBf1m12rw8utVPuUNIvD_IVjIK0Gz3R-_hGcDIRcn6TJZl7ALAF6CX5AY3Des2NyEmfiShwiDPxRFsxga40ghxqahs1FLoWVAU7gCVboIh_tjz6U7j7xVL1Y001k6u0_dcab-ghYPDLIdqjLvzuq5j4s-BN3abiJhrncTjEeBoQGkC9ltLJt8VtxJw -brokerId wy6s3djof41 -action deploy -applicationName \"Incident Manager\" -applicationVersion \"1.0.0\" -clientUsername incident_manager -clientAuthorizationGroupName IncidentManagerOAuth"
+		String token = config.get("token")
+		String brokerId = ""
+		
+		String action = config.get("action")
+		String applicationName = config.get("applicationName")
+		String applicationVersion = config.get("applicationVersion")
+		String clientUsername = config.get("clientUsername")
+		String clientAuthorizationGroupName = config.get("clientAuthorizationGroupName")
+		
+		String params = String.format("-token %s -brokerId %swy6s3djof41 -action %s -applicationName \"%s\" -applicationVersion \"%s\" -clientUsername %s -clientAuthorizationGroupName %s", token, brokerId, action, applicationName, applicationVersion, clientUsername, clientAuthorizationGroupName) 
 		
 		def commandOutput
 		

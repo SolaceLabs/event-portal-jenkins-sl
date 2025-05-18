@@ -1,5 +1,6 @@
 import glob
 import json
+import logging
 import re
 
 import requests
@@ -12,6 +13,9 @@ ASYNC_API_APPLICATION_VERSION_ID_PATTERN = r'x-ep-application-version-id: "([\w\
 ASYNC_API_APPLICATION_VERSION_NAME_PATTERN = r'x-ep-displayname: "([\w\.\s]+)"'
 ASYNC_API_APPLICATION_STATE_PATTERN = r'x-ep-state-name: "([\w\.]+)"'
 ASYNC_API_APPLICATION_STATE_ID_PATTERN = r'x-ep-state-id: "([\w\.]+)"'
+
+# logging
+logger = logging.getLogger(__name__)
 
 # Classes
 class EventPortalApplication:
@@ -36,30 +40,6 @@ def to_pretty_json(ugly_json):
     parsed = json.loads(ugly_json)
     pretty_json = json.dumps(parsed, indent=4)
     return pretty_json
-
-def get_modeled_event_meshes(token):
-    url = "https://api.solace.cloud/api/v2/architecture/about/eventMeshes?pageSize=100&pageNumber=1&sort=name%3Aasc"
-
-    headers = {
-        "accept": "*/*",
-        "authorization": f"Bearer {token}"
-    }
-    response = requests.get(url, headers=headers, verify=False)
-    if response.status_code != 200:
-        raise Exception("Getting modeled event meshes failed: " + str(response.json()))
-    return response.text
-
-def get_messaging_services(token):
-    url = "https://api.solace.cloud/api/v2/architecture/messagingServices?pageSize=100&pageNumber=1&sort=name%3Aasc"
-
-    headers = {
-        "accept": "application/json",
-        "authorization": f"Bearer {token}"    }
-
-    response = requests.get(url, headers=headers)
-    if response.status_code != 200:
-        raise Exception("Getting list of messaging services failed: " + str(response.json()))
-    return response.text
 
 def get_match(pattern, line):
     match_group = None
@@ -125,3 +105,207 @@ def get_applications_from_yaml_files():
             application_list.append(ep_application)
 
     return application_list
+
+def get_modeled_event_meshes(token):
+    url = "https://api.solace.cloud/api/v2/architecture/about/eventMeshes?pageSize=100&pageNumber=1&sort=name%3Aasc"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {token}"
+    }
+    response = requests.get(url, headers=headers, verify=False)
+    if response.status_code != 200:
+        raise Exception("Getting modeled event meshes failed: " + str(response.json()))
+    return response.text
+
+def get_messaging_services(token):
+    url = "https://api.solace.cloud/api/v2/architecture/messagingServices?pageSize=100&pageNumber=1&sort=name%3Aasc"
+
+    headers = {
+        "accept": "application/json",
+        "authorization": f"Bearer {token}"    }
+
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception("Getting list of messaging services failed: " + str(response.json()))
+    return response.text
+
+def get_application_list_by_name(token, application_name, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/applications?pageSize=100&pageNumber=1&name={application_name}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(
+        f"Getting application list by name: {application_name}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting Application List by name: {application_name} failed! - error details: " + str(response.json()))
+
+    json_response = json.loads(response.text)
+    data = json_response.get('data')
+    if data is not None:
+        for record in data:
+            application.applicationTitle = record.get('name')
+            application.applicationId = record.get('id')
+
+    print(f"Application retrieved: {application}")
+    return None
+
+def get_application_version_by_name(token, version_name, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application.applicationId}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(f"Getting application versions for Application: {application.applicationTitle}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting application versions for application: {application.applicationTitle} failed! - error details: " + str(response.json()))
+
+    json_response = json.loads(response.text)
+    data = json_response.get('data')
+    if data is not None:
+        for record in data:
+            version = record.get('version')
+            if version == version_name:
+                application.applicationVersion = version
+                application.applicationVersionId = record.get('id')
+                application.applicationVersionName = record.get('displayName')
+                application.applicationStateId = record.get('stateId')
+                if application.applicationStateId == '1':
+                    application.applicationState = 'DRAFT'
+                elif application.applicationStateId == '2':
+                    application.applicationState = 'RELEASED'
+                else:
+                    application.applicationState = 'X'
+
+    print(f"Application retrieved: {application}")
+    return None
+
+def get_application_version(token, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application.applicationId}&ids={application.applicationVersionId}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+    logger.info(
+        f"Validating Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Validation for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def get_application_client_profile(token, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceClientProfileNames?pageSize=20&pageNumber=1&entityIds={application.applicationVersionId}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(f"Getting client profile for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting client profile for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def get_application_authorization_group(token, broker_id, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceAuthorizationGroups?pageSize=100&pageNumber=1&eventBrokerIds={broker_id}&entityIds={application.applicationId}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+    logger.info(url)
+    logger.info(
+        f"Getting client authorization group for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} - BrokerId: {broker_id}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting client client Authorization group for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def create_application_authorization_group(token, broker_id, application):
+    url = "https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceAuthorizationGroups"
+
+    payload = {
+        "action": "deploy",
+        "applicationVersionId": f"{application.applicationVersionId}",
+        "eventBrokerId": f"{broker_id}",
+
+        "value": {
+            "clientUsername": f"{application.clientUserName}",
+            "authorizationGroupName": f"{application.clientAuthorizationGroupName}"
+        },
+        "configurationTypeId": "solaceAuthorizationGroup",
+        "contextType": "EVENT_BROKER",
+        "contextId": f"{broker_id}",
+        "entityId": f"{application.applicationId}"
+    }
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "content-type": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code != 200 and response.status_code != 201:
+        raise Exception(f"Creating client client Authorization group for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def deploy_application_to_runtime(token, broker_id, action, application):
+    url = "https://api.solace.cloud/api/v2/architecture/runtimeManagement/applicationDeployments"
+
+    payload = {
+        "action": f"{action}",
+        "applicationVersionId": f"{application.applicationVersionId}",
+        "eventBrokerId": f"{broker_id}"
+    }
+    headers = {
+        "accept": "*/*",
+        "content-type": "application/json",
+        "authorization": f"Bearer {token}"
+    }
+    logger.info(f"Pushing application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} to Runtime Broker with Id: {broker_id}")
+    response = requests.post(url, json=payload, headers=headers, verify=False)
+    if response.status_code != 200:
+        raise Exception(f"Pushing application: {application.applicationTitle} to Runtime Broker with Id: {broker_id} failed! - error details: " + str(response.json()))
+
+    json_response = json.loads(response.text)
+
+    data = json_response.get('data')
+    if data is not None:
+        application.lastChangeRecordId = data.get('changeRecordId')
+
+    print(f"changeRecordId: {application.lastChangeRecordId}")
+    return response.text
+
+def get_application_deployment_status(token, broker_id, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/runtimeManagement/applications/{application.applicationId}/configurationPushJobs?pageSize=20&pageNumber=1&changeRecordIds={application.lastChangeRecordId}"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {token}"
+    }
+    logger.info(
+        f"Getting deployment status for application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} to Runtime Broker with Id: {broker_id}")
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(f"Getting deployment status for Application: {application.applicationTitle} ChangeRecordId: {application.lastChangeRecordId} failed! - error details: " + str(response.json()))
+
+    return response.text

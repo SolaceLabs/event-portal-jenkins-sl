@@ -115,13 +115,13 @@ class Python implements Serializable {
 			commandOutput = script.sh (
 				script: 'env/bin/python3 python/scripts/solace-ep-validate-authorization-group.py ' + params,
 				returnStatus: true
-			).trim()
+			)
 
 		} else {
 			commandOutput = script.sh (
 				script: 'python python\\scripts\\solace-ep-validate-authorization-group.py ' + params,
 				returnStatus: true
-			).trim()
+			)
 		}
 		
 		script.echo "Output:  ${commandOutput}"

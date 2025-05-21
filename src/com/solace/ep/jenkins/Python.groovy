@@ -95,7 +95,7 @@ class Python implements Serializable {
 		copyResourceFromLibrary("python/scripts/solace-ep-push-to-runtime.py", true)
 		script.sh "chmod +x python/scripts/solace-ep-push-to-runtime.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-validate-authorization-group.py", true)
-		script.sh "chmod +x python/scripts/solace-ep-validate-authorization-group"
+		script.sh "chmod +x python/scripts/solace-ep-validate-authorization-group.py"
     }
 	
 	public String validateAuthGroup (HashMap config) {

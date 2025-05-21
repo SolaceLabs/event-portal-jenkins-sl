@@ -107,7 +107,7 @@ class Python implements Serializable {
 
 		
 		String params = String.format("-token %s -brokerName \"%s\" -action \"%s\" -applicationName \"%s\" -applicationVersion \"%s\"",
-				token, brokerName, action, applicationName, applicationVersion, clientUsername, clientAuthorizationGroupName)
+				token, brokerName, action, applicationName, applicationVersion)
 		
 		String commandOutput
 		

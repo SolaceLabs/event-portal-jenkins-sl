@@ -109,7 +109,7 @@ class Python implements Serializable {
 		String params = String.format("-token %s -brokerName \"%s\" -action \"%s\" -applicationName \"%s\" -applicationVersion \"%s\"",
 				token, brokerName, action, applicationName, applicationVersion, clientUsername, clientAuthorizationGroupName)
 		
-		def commandOutput
+		String commandOutput
 		
 		if(this.script.isUnix()) {
 			commandOutput = script.sh (

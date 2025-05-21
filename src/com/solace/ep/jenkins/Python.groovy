@@ -101,12 +101,11 @@ class Python implements Serializable {
 	public String validateAuthGroup (HashMap config) {
 		String token = config.get("token")
 		String brokerName = config.get("brokerName")
-		String action = config.get("action")
 		String applicationName = config.get("applicationName")
 		String applicationVersion = config.get("applicationVersion")
 
 		
-		String params = String.format("-token %s -brokerName \"%s\" -action \"%s\" -applicationName \"%s\" -applicationVersion \"%s\"",
+		String params = String.format("-token %s -brokerName \"%s\" -applicationName \"%s\" -applicationVersion \"%s\"",
 				token, brokerName, action, applicationName, applicationVersion)
 		
 		String commandOutput

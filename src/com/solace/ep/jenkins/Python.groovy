@@ -98,7 +98,7 @@ class Python implements Serializable {
 		script.sh "chmod +x python/scripts/solace-ep-validate-authorization-group"
     }
 	
-	def validateAuthGroup (HashMap config) {
+	public String validateAuthGroup (HashMap config) {
 		String token = config.get("token")
 		String brokerName = config.get("brokerName")
 		String action = config.get("action")

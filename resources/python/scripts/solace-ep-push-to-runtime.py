@@ -5,7 +5,7 @@ import sys
 import time
 import http.client as http_client
 
-import requests
+
 import urllib3
 
 import solace_ep_integration as sepi
@@ -17,23 +17,6 @@ ACTION_UNDEPLOY = 'undeploy'
 
 # logging
 logger = logging.getLogger(__name__)
-
-'''
-Validate that the application with that version id exists in EP designer
-'''
-def validate_application_version(token, application):
-    txt_response = sepi.get_application_version(token, application)
-    pretty_json = sepi.to_pretty_json(txt_response)
-    print(pretty_json)
-
-    json_response = json.loads(txt_response)
-    data = json_response.get('data')
-    if data is not None:
-        if len(data) == 0:
-            raise Exception(
-                f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not Exists on Event Portal Designer!. Aborting!")
-
-    return None
 
 def write_application_async_api_specification(token, application):
     txt_response = sepi.get_application_async_api_specification(token, application)
@@ -130,7 +113,7 @@ def get_deployment_status_single_application_to_runtime(token, broker_id, app):
 def deploy_applications_to_runtime(token, broker_service_id, broker_id, application_list):
     # Validate that the application with that version id exists in EP designer
     for app in application_list:
-        validate_application_version(token, app)
+        sepi.validate_application_version(token, app)
 
     for app in application_list:
         validate_application_client_profile(token, broker_service_id, app)
@@ -152,7 +135,7 @@ def deploy_applications_to_runtime(token, broker_service_id, broker_id, applicat
 def undeploy_applications_to_runtime(token, broker_id, application_list):
     # Validate that the application with that version id exists in EP designer
     for app in application_list:
-        validate_application_version(token, app)
+        sepi.validate_application_version(token, app)
 
     for app in application_list:
         deploy_undeploy_application_to_runtime(token, broker_id, ACTION_UNDEPLOY, app)

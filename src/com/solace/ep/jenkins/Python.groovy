@@ -89,12 +89,45 @@ class Python implements Serializable {
 		copyResourceFromLibrary("python/scripts/solace_ep_integration.py", true)
 		script.sh "chmod +x python/scripts/solace_ep_integration.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-list-messaging-services.py", true)
-		script.sh "chmod +x python/scripts/solace_ep_integration.py"
+		script.sh "chmod +x python/scripts/solace-ep-list-messaging-services.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-list-modeled-event-meshes.py", true)
-		script.sh "chmod +x python/scripts/solace_ep_integration.py"
+		script.sh "chmod +x python/scripts/solace-ep-list-modeled-event-meshes.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-push-to-runtime.py", true)
-		script.sh "chmod +x python/scripts/solace_ep_integration.py"
+		script.sh "chmod +x python/scripts/solace-ep-push-to-runtime.py"
+		copyResourceFromLibrary("python/scripts/solace-ep-validate-authorization-group.py", true)
+		script.sh "chmod +x python/scripts/solace-ep-validate-authorization-group"
     }
+	
+	def validateAuthGroup (HashMap config) {
+		String token = config.get("token")
+		String brokerName = config.get("brokerName")
+		String action = config.get("action")
+		String applicationName = config.get("applicationName")
+		String applicationVersion = config.get("applicationVersion")
+
+		
+		String params = String.format("-token %s -brokerName \"%s\" -action \"%s\" -applicationName \"%s\" -applicationVersion \"%s\"",
+				token, brokerName, action, applicationName, applicationVersion, clientUsername, clientAuthorizationGroupName)
+		
+		def commandOutput
+		
+		if(this.script.isUnix()) {
+			commandOutput = script.sh (
+				script: 'env/bin/python3 python/scripts/solace-ep-validate-authorization-group.py ' + params,
+				returnStatus: true
+			).trim()
+
+		} else {
+			commandOutput = script.sh (
+				script: 'python python\\scripts\\solace-ep-validate-authorization-group.py ' + params,
+				returnStatus: true
+			).trim()
+		}
+		
+		script.echo "Output:  ${commandOutput}"
+		
+		return commandOutput
+	}
 	
 	def pushApplicationToRuntime (HashMap config) {
 		

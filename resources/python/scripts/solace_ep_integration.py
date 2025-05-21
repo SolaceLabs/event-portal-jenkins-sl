@@ -246,6 +246,24 @@ def get_application_version(token, application):
 
     return response.text
 
+'''
+Validate that the application with that version id exists in EP designer
+'''
+def validate_application_version(token, application):
+    txt_response = get_application_version(token, application)
+    pretty_json = to_pretty_json(txt_response)
+    print(pretty_json)
+
+    json_response = json.loads(txt_response)
+    data = json_response.get('data')
+    if data is not None:
+        if len(data) == 0:
+            raise Exception(
+                f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not Exists on Event Portal Designer!. Aborting!")
+
+    return None
+
+
 def get_application_async_api_specification(token, application):
     url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions/{application.applicationVersionId}/asyncApi?format=json&showVersioning=true&includedExtensions=all&asyncApiVersion=2.5.0"
 

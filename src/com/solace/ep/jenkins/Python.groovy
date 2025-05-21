@@ -111,13 +111,13 @@ class Python implements Serializable {
 		int exitStatus
 		
 		if(this.script.isUnix()) {
-			commandOutput = script.sh (
+			exitStatus = script.sh (
 				script: 'env/bin/python3 python/scripts/solace-ep-validate-authorization-group.py ' + params,
 				returnStatus: true
 			)
 
 		} else {
-			commandOutput = script.sh (
+			exitStatus = script.sh (
 				script: 'python python\\scripts\\solace-ep-validate-authorization-group.py ' + params,
 				returnStatus: true
 			)

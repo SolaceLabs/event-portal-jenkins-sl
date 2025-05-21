@@ -108,7 +108,7 @@ class Python implements Serializable {
 		String params = String.format("-token %s -brokerName \"%s\" -applicationName \"%s\" -applicationVersion \"%s\"",
 				token, brokerName, applicationName, applicationVersion)
 		
-		String commandOutput
+		int exitStatus
 		
 		if(this.script.isUnix()) {
 			commandOutput = script.sh (
@@ -123,7 +123,7 @@ class Python implements Serializable {
 			)
 		}
 		
-		script.echo "Output:  ${commandOutput}"
+		script.echo "ExitStatus:  ${exitStatus}"
 		
 		return commandOutput
 	}

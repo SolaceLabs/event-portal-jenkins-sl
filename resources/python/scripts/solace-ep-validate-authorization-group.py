@@ -71,7 +71,10 @@ def main(argv):
 
     print(requested_app)
 
-    return does_application_has_authorization_group(args.token, broker_id, requested_app)
+    if does_application_has_authorization_group(args.token, broker_id, requested_app):
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 if __name__ == "__main__":
     http_client.HTTPConnection.debuglevel = 1

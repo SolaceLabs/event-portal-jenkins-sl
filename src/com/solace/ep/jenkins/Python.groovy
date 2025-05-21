@@ -98,7 +98,7 @@ class Python implements Serializable {
 		script.sh "chmod +x python/scripts/solace-ep-validate-authorization-group.py"
     }
 	
-	public String validateAuthGroup (HashMap config) {
+	public int validateAuthGroup (HashMap config) {
 		String token = config.get("token")
 		String brokerName = config.get("brokerName")
 		String applicationName = config.get("applicationName")
@@ -125,7 +125,7 @@ class Python implements Serializable {
 		
 		script.echo "ExitStatus:  ${exitStatus}"
 		
-		return commandOutput
+		return exitStatus
 	}
 	
 	def pushApplicationToRuntime (HashMap config) {

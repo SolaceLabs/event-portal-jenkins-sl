@@ -105,13 +105,13 @@ class Python implements Serializable {
 		
 		if(this.script.isUnix()) {
 			commandOutput = script.sh (
-				script: 'env/bin/python3 python/scripts/solace-ep-read-async-files.py ' + params,
+				script: 'env/bin/python3 python/scripts/solace-ep-read-async-files.py ',
 				returnStdout: true
 			).trim()
 
 		} else {
 			commandOutput = script.sh (
-				script: 'python python\\scripts\\solace-ep-read-async-files.py ' + params,
+				script: 'python python\\scripts\\solace-ep-read-async-files.py ',
 				returnStdout: true
 			).trim()
 		}

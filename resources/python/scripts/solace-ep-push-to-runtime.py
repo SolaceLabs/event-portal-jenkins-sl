@@ -198,9 +198,6 @@ def main(argv):
     # Write Async API spec to json file
     write_application_async_api_specification(args.token, requested_app)
 
-    #scan current workspace to get all the yaml files and read them
-    #application_list = sepi.get_applications_from_yaml_files()
-
     #i = 1
     #for app in application_list:
     #    app.clientUserName = args.clientUsername + "_" + "{:03d}".format(i)

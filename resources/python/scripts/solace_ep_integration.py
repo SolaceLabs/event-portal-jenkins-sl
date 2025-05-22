@@ -6,13 +6,13 @@ import re
 import requests
 
 # Constants
-ASYNC_API_APPLICATION_TITLE_PATTERN = r'title: "([\w\.\s]+)"'
-ASYNC_API_APPLICATION_ID_PATTERN = r'x-ep-application-id: "([\w\.]+)"'
-ASYNC_API_APPLICATION_VERSION_PATTERN = r'version: "([\w\.]+)"'
-ASYNC_API_APPLICATION_VERSION_ID_PATTERN = r'x-ep-application-version-id: "([\w\.]+)"'
-ASYNC_API_APPLICATION_VERSION_NAME_PATTERN = r'x-ep-displayname: "([\w\.\s]+)"'
-ASYNC_API_APPLICATION_STATE_PATTERN = r'x-ep-state-name: "([\w\.]+)"'
-ASYNC_API_APPLICATION_STATE_ID_PATTERN = r'x-ep-state-id: "([\w\.]+)"'
+ASYNC_API_APPLICATION_TITLE_PATTERN = r'"title": "([\w\.\s]+)"'
+ASYNC_API_APPLICATION_ID_PATTERN = r'"x-ep-application-id": "([\w\.]+)"'
+ASYNC_API_APPLICATION_VERSION_PATTERN = r'"version": "([\w\.]+)"'
+ASYNC_API_APPLICATION_VERSION_ID_PATTERN = r'"x-ep-application-version-id": "([\w\.]+)"'
+ASYNC_API_APPLICATION_VERSION_NAME_PATTERN = r'"x-ep-displayname": "([\w\.\s]+)"'
+ASYNC_API_APPLICATION_STATE_PATTERN = r'"x-ep-state-name": "([\w\.]+)"'
+ASYNC_API_APPLICATION_STATE_ID_PATTERN = r'"x-ep-state-id": "([\w\.]+)"'
 
 # logging
 logger = logging.getLogger(__name__)
@@ -46,16 +46,16 @@ def get_match(pattern, line):
     match = re.match(pattern, line)
     if match:
         match_group = match.group(1)
-        print(f"Match: '{match_group}'")
+        # print(f"Match: '{match_group}'")
 
     return match, match_group
 
-def get_applications_from_yaml_files():
+def get_applications_from_json_files():
     application_list = []
-    files = glob.glob('./**/*.yaml', recursive=True)
+    files = glob.glob('./**/*.json', recursive=True)
 
     for file in files:
-        print(file)
+        # print(file)
         with open(file, 'r') as o_file:
             application_title = None
             application_id = None
@@ -68,7 +68,7 @@ def get_applications_from_yaml_files():
             for line in o_file:
                 # Removes trailing newline characters
                 line = line.strip()
-                print(line)
+                # print(line)
 
                 match, match_group = get_match(ASYNC_API_APPLICATION_TITLE_PATTERN, line)
                 if match:
@@ -99,10 +99,11 @@ def get_applications_from_yaml_files():
                     application_state_id = match_group
 
 
-            ep_application = EventPortalApplication(application_title, application_id, application_version,
+            if application_title is not None and application_version is not None:
+                ep_application = EventPortalApplication(application_title, application_id, application_version,
                                                     application_version_id, application_version_name, application_state, application_state_id)
-            print(ep_application)
-            application_list.append(ep_application)
+            # print(ep_application)
+                application_list.append(ep_application)
 
     return application_list
 

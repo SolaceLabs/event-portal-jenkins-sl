@@ -96,7 +96,29 @@ class Python implements Serializable {
 		script.sh "chmod +x python/scripts/solace-ep-push-to-runtime.py"
 		copyResourceFromLibrary("python/scripts/solace-ep-validate-authorization-group.py", true)
 		script.sh "chmod +x python/scripts/solace-ep-validate-authorization-group.py"
+		copyResourceFromLibrary("python/scripts/solace-ep-read-async-files.py", true)
+		script.sh "chmod +x python/scripts/solace-ep-read-async-files.py"
     }
+	
+	public String [] getDetailsFromAsyncApiFiles() {
+		String commandOutput
+		
+		if(this.script.isUnix()) {
+			commandOutput = script.sh (
+				script: 'env/bin/python3 python/scripts/solace-ep-read-async-files.py ' + params,
+				returnStdout: true
+			).trim()
+
+		} else {
+			commandOutput = script.sh (
+				script: 'python python\\scripts\\solace-ep-read-async-files.py ' + params,
+				returnStdout: true
+			).trim()
+		}
+		
+		script.echo "Output:  ${commandOutput}"
+		return commandOutput.split("@")
+	}
 	
 	public int validateAuthGroup (HashMap config) {
 		String token = config.get("token")

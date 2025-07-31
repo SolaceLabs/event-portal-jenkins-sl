@@ -167,7 +167,7 @@ def undeploy_applications_to_runtime(token, broker_id, application_list):
     for app in application_list:
         get_deployment_status_single_application_to_runtime(token, broker_id, app)
 
-    '''
+	# undeploy the application
     for app in application_list:
         deploy_undeploy_application_to_runtime(token, broker_id, ACTION_UNDEPLOY, app)
 
@@ -176,7 +176,7 @@ def undeploy_applications_to_runtime(token, broker_id, application_list):
 
     for app in application_list:
         get_deployment_status_single_application_to_runtime(token, broker_id, app)
-    '''
+
 
     return None
 

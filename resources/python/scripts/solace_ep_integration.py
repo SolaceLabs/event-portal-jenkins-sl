@@ -23,6 +23,7 @@ class EventPortalApplication:
     clientProfileName = None
     clientUserName = None
     clientAuthorizationGroupName = None
+    clientAuthorizationGroupId = None
     def __init__(self, title, application_id, application_version, application_version_id, application_version_name, application_state, application_state_id):
         self.applicationTitle = title
         self.applicationId = application_id
@@ -364,6 +365,25 @@ def create_application_authorization_group(token, broker_id, application):
         raise Exception(f"Creating client client Authorization group for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
 
     return response.text
+
+def delete_application_authorization_group(token, broker_id, application):
+
+    if application.clientAuthorizationGroupId is None:
+        return "{}"
+
+    url = f"https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceAuthorizationGroups/{application.clientAuthorizationGroupId}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "content-type": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    response = requests.delete(url, headers=headers)
+    if response.status_code != 204:
+        raise Exception(f"Deleting client client Authorization group for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! ")
+
+    return "{}"
 
 def deploy_application_to_runtime(token, broker_id, action, application):
     url = "https://api.solace.cloud/api/v2/architecture/runtimeManagement/applicationDeployments"

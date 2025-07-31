@@ -64,11 +64,11 @@ def validate_application_authorization_group(token, broker_id, application):
         if len(data) == 0:
             logger.warning(
                 f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not have an Authorization Group (OAuth or LDAP)!.")
-
-            logger.warning("Deploying the App to the Authorization Group...")
+            '''
+            logger.warning("Deploying the App for the Authorization Group...")
             deploy_undeploy_application_to_runtime(token, broker_id, ACTION_DEPLOY, application)
             get_deployment_status_single_application_to_runtime(token, broker_id, application)
-
+            '''
             logger.warning("Creating the Authorization Group...")
             txt_response = sepi.create_application_authorization_group(token, broker_id, application)
             pretty_json = sepi.to_pretty_json(txt_response)
@@ -138,6 +138,37 @@ def undeploy_applications_to_runtime(token, broker_id, application_list):
         sepi.validate_application_version(token, app)
 
     for app in application_list:
+        txt_response = sepi.get_application_authorization_group(token, broker_id, app)
+        pretty_json = sepi.to_pretty_json(txt_response)
+        print(pretty_json)
+
+        json_response = json.loads(txt_response)
+        data = json_response.get('data')
+        if data is not None:
+            if len(data) > 0:
+                record = data[0]
+                if record is not None:
+                    client_authorization_group_id = record.get('id')
+                    app.clientAuthorizationGroupId = client_authorization_group_id
+
+    # delete the application group
+    for app in application_list:
+        txt_response = sepi.delete_application_authorization_group(token, broker_id, app)
+        pretty_json = sepi.to_pretty_json(txt_response)
+        print(pretty_json)
+
+    # push the application group changes to the broker
+    for app in application_list:
+        deploy_undeploy_application_to_runtime(token, broker_id, ACTION_DEPLOY, app)
+
+    logger.info(f"Waiting {WAIT_TIME_IN_SECONDS} second(s) before querying for update app status...")
+    time.sleep(WAIT_TIME_IN_SECONDS)
+
+    for app in application_list:
+        get_deployment_status_single_application_to_runtime(token, broker_id, app)
+
+    '''
+    for app in application_list:
         deploy_undeploy_application_to_runtime(token, broker_id, ACTION_UNDEPLOY, app)
 
     logger.info(f"Waiting {WAIT_TIME_IN_SECONDS} second(s) before querying for undeployment status...")
@@ -145,6 +176,7 @@ def undeploy_applications_to_runtime(token, broker_id, application_list):
 
     for app in application_list:
         get_deployment_status_single_application_to_runtime(token, broker_id, app)
+    '''
 
     return None
 

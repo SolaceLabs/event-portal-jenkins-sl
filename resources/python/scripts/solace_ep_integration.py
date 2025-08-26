@@ -2,6 +2,7 @@ import glob
 import json
 import logging
 import re
+from urllib.parse import quote, quote_plus
 
 import requests
 
@@ -24,14 +25,23 @@ class EventPortalApplication:
     clientUserName = None
     clientAuthorizationGroupName = None
     clientAuthorizationGroupId = None
-    def __init__(self, title, application_id, application_version, application_version_id, application_version_name, application_state, application_state_id):
-        self.applicationTitle = title
-        self.applicationId = application_id
-        self.applicationVersion = application_version
-        self.applicationVersionId = application_version_id
-        self.applicationVersionName = application_version_name
-        self.applicationState = application_state
-        self.applicationStateId = application_state_id
+
+    def __init__(self, title : str, application_id: str, application_version: str, application_version_id: str, application_version_name: str, application_state: str, application_state_id: str):
+        self.applicationTitle: str = title
+        self.applicationId: str = application_id
+        self.applicationVersion: str = application_version
+        self.applicationVersionId: str = application_version_id
+        self.applicationVersionName: str = application_version_name
+        self.applicationState: str = application_state
+        self.applicationStateId: str = application_state_id
+        self.sharedAuthorizationGroup:str = None
+        self.sharedACLProfile:str = None
+        self.declaredProducedEventVersionIds: list[str] = []
+        self.declaredConsumedEventVersionIds: list[str] = []
+        self.declaredConsumedEventVersionIdsWithConsumers: list[str] = []
+        self.producedEventTopics: list[dict[str, any]] = []
+        self.consumedEventTopics: list[dict[str, any]] = []
+
 
     def __str__(self):
         return json.dumps(self.__dict__)
@@ -154,8 +164,51 @@ def get_application_list_by_name(token, application_name, application):
             application.applicationTitle = record.get('name')
             application.applicationId = record.get('id')
 
+            custom_attributes = record.get('customAttributes', [])
+            for attribute in custom_attributes:
+                attribute_name = attribute.get('customAttributeDefinitionName')
+                attribute_value = attribute.get('value')
+                if attribute_name == "AuthorizationGroup":
+                    application.sharedAuthorizationGroup = attribute_value
+
     print(f"Application retrieved: {application}")
     return None
+
+def get_application_list_by_shared_authorization_group(token : str, shared_authorization_group : str):
+    url = f"https://api.solace.cloud/api/v2/architecture/applications?pageSize=100&pageNumber=1&customAttributes=AuthorizationGroup%3D%3D{shared_authorization_group}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(
+        f"Getting application list by custom attribute AuthorizationGroup: {shared_authorization_group}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting application list by custom attribute AuthorizationGroup: {shared_authorization_group} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def get_application_versions_list_by_application_and_version_ids(token : str, application_ids : list[str], app_version_ids : list[str]):
+    application_ids_list = '&applicationIds='.join(application_ids)
+    application_versions_ids_list = '&ids='.join(app_version_ids)
+    url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application_ids_list}&ids={application_versions_ids_list}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(
+        f"Getting application version list by ids - AppIds: {application_ids_list}, VersionIds: {application_versions_ids_list}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting application version list by ids - AppIds: {application_ids_list}, VersionIds: {application_versions_ids_list} failed! - error details: " + str(response.json()))
+
+    return response.text
 
 def get_application_version_by_name(token, version_name, application):
     url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions?pageSize=100&pageNumber=1&applicationIds={application.applicationId}"
@@ -171,6 +224,7 @@ def get_application_version_by_name(token, version_name, application):
     if response.status_code != 200:
         raise Exception(f"Getting application versions for application: {application.applicationTitle} failed! - error details: " + str(response.json()))
 
+    logger.info(f"Application version retrieved: \n{to_pretty_json(response.text)}")
     json_response = json.loads(response.text)
     data = json_response.get('data')
     if data is not None:
@@ -188,8 +242,68 @@ def get_application_version_by_name(token, version_name, application):
                 else:
                     application.applicationState = 'X'
 
-    print(f"Application retrieved: {application}")
+                # Get topics from direct consumers
+                consumers = record.get('consumers',[])
+                for consumer in consumers:
+                    consumer_type = consumer.get('consumerType')
+                    if consumer_type != "eventQueue":
+                        subscriptions = consumer.get('subscriptions')
+                        for subscription in subscriptions:
+                            full_topic = subscription.get('value')
+
+                            attracted_event_version_ids = subscription.get('attractedEventVersionIds')
+                            if not attracted_event_version_ids is None:
+                                for attracted_event_version_id in attracted_event_version_ids:
+                                    event_version_id = attracted_event_version_id.get('eventVersionId')
+                                    application.declaredConsumedEventVersionIdsWithConsumers.append(event_version_id)
+
+                            if not full_topic is None:
+                                application.consumedEventTopics.append({"eventIds": [ attracted_event_version_ids ], "topic": full_topic})
+
+                # Get topics from published events
+                application.declaredProducedEventVersionIds = record.get('declaredProducedEventVersionIds')
+                application.declaredConsumedEventVersionIds = record.get('declaredConsumedEventVersionIds')
+
+    if not application.declaredProducedEventVersionIds is None:
+        for produced_event in application.declaredProducedEventVersionIds:
+            json_response_txt = get_event_by_version(token, produced_event)
+            json_response = json.loads(json_response_txt)
+            event = json_response.get('data')
+            delivery_descriptor = event.get('deliveryDescriptor')
+            address = delivery_descriptor.get('address')
+            if not address is None:
+                address_levels = address.get('addressLevels')
+                topic = []
+                for address_level in address_levels:
+                    name = address_level.get('name')
+                    add_type = address_level.get('addressLevelType')
+                    if add_type == 'literal':
+                        topic.append(name)
+                    elif add_type == 'variable':
+                        topic.append('*')
+
+                full_topic = '/'.join(topic)
+                application.producedEventTopics.append( {"eventIds": [ produced_event ], "topic": full_topic} )
+
+    logger.info(f"Application retrieved: \n{to_pretty_json(str(application))}")
     return None
+
+def get_event_by_version(token, event_version : str) -> str:
+    url = f"https://api.solace.cloud/api/v2/architecture/eventVersions/{event_version}"
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    logger.info(f"Getting event versions with id: {event_version}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting event version  with id: {event_version} failed! - error details: " + str(response.json()))
+
+    logger.info(response.text)
+    return response.text
 
 def get_broker_id_by_name(token, broker_name):
     response = get_messaging_services(token)
@@ -264,7 +378,6 @@ def validate_application_version(token, application):
                 f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not Exists on Event Portal Designer!. Aborting!")
 
     return None
-
 
 def get_application_async_api_specification(token, application):
     url = f"https://api.solace.cloud/api/v2/architecture/applicationVersions/{application.applicationVersionId}/asyncApi?format=json&showVersioning=true&includedExtensions=all&asyncApiVersion=2.5.0"
@@ -366,8 +479,73 @@ def create_application_authorization_group(token, broker_id, application):
 
     return response.text
 
-def delete_application_authorization_group(token, broker_id, application):
+def delete_application_client_username_reference(token, broker_id, application):
+    url = f"https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceClientUsernameReferences?pageSize=100&pageNumber=1&entityIds={application.applicationId}&eventBrokerIds={broker_id}"
 
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+    logger.info(url)
+    logger.info(f"Getting client username reference configuration for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} - BrokerId: {broker_id}")
+    response = requests.get(url, headers=headers)
+
+    if response.status_code != 200:
+        raise Exception(f"Getting client username reference configuration for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    client_username_reference_id = None
+    json_response = json.loads(response.text)
+    data = json_response.get('data')
+    if data is not None:
+        if len(data) == 0:
+            logger.info(f"Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} does not have a Client Username reference!")
+            return None
+        else:
+            record = data[0]
+            if record is not None:
+                client_username_reference_id = record.get('id')
+
+
+    if not client_username_reference_id is None:
+        url = f"https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceClientUsernameReferences/{client_username_reference_id}"
+
+        logger.info(url)
+        logger.info(
+            f"Deleting client username reference configuration for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} - BrokerId: {broker_id}")
+        response = requests.delete(url, headers=headers)
+
+        if response.status_code != 204:
+            raise Exception(
+                f"Deleting client username reference configuration for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(
+                    response.json()))
+
+    return None
+
+def create_application_client_username_reference(token, broker_id, application):
+    url = "https://api.solace.cloud/api/v2/architecture/designer/configuration/solaceClientUsernameReferences"
+
+    payload = {
+        "value": {
+            "clientUsername": f"{application.clientUserName}"
+        },
+        "contextType": "EVENT_BROKER",
+        "contextId": f"{broker_id}",
+        "entityId": f"{application.applicationId}"
+    }
+
+    headers = {
+        "accept": "application/json;charset=UTF-8",
+        "content-type": "application/json;charset=UTF-8",
+        "authorization": f"Bearer {token}"
+    }
+
+    response = requests.post(url, json=payload, headers=headers)
+    if response.status_code != 200 and response.status_code != 201:
+        raise Exception(f"Creating client user name reference for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def delete_application_authorization_group(token, broker_id, application):
     if application.clientAuthorizationGroupId is None:
         return "{}"
 
@@ -384,6 +562,27 @@ def delete_application_authorization_group(token, broker_id, application):
         raise Exception(f"Deleting client client Authorization group for Application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} failed! ")
 
     return "{}"
+
+
+def get_preview_deploy_application_to_runtime(token, broker_id, action, application_version_id):
+    url = "https://api.solace.cloud/api/v2/architecture/runtimeManagement/applicationDeploymentPreviews"
+
+    payload = {
+        "action": f"{action}",
+        "applicationVersionId": f"{application_version_id}",
+        "eventBrokerId": f"{broker_id}"
+    }
+    headers = {
+        "accept": "*/*",
+        "content-type": "application/json",
+        "authorization": f"Bearer {token}"
+    }
+    logger.info(f"Getting deployment preview for applicationVersionId: {application_version_id} to Runtime Broker with Id: {broker_id}")
+    response = requests.post(url, json=payload, headers=headers, verify=False)
+    if response.status_code != 200:
+        raise Exception(f"Getting deployment preview for applicationVersionId: {application_version_id} to Runtime Broker with Id: {broker_id} failed! - error details: " + str(response.json()))
+
+    return response.text
 
 def deploy_application_to_runtime(token, broker_id, action, application):
     url = "https://api.solace.cloud/api/v2/architecture/runtimeManagement/applicationDeployments"
@@ -424,5 +623,93 @@ def get_application_deployment_status(token, broker_id, application):
     response = requests.get(url, headers=headers)
     if response.status_code != 200:
         raise Exception(f"Getting deployment status for Application: {application.applicationTitle} ChangeRecordId: {application.lastChangeRecordId} failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def get_broker_authorization_group_details(semp_token : str, broker_hostname : str, broker_msg_vpn : str, authorization_group : str):
+    url = f"https://{broker_hostname}/SEMP/v2/config/msgVpns/{broker_msg_vpn}/authorizationGroups/{authorization_group}"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {semp_token}"
+    }
+    logger.info(f"Getting details for authorization group: '{authorization_group}' from msgVpn: '{broker_msg_vpn}'")
+    response = requests.get(url, headers=headers)
+    if response.status_code != 200:
+        raise Exception(
+            f"Getting details for authorization group: '{authorization_group}' from msgVpn: '{broker_msg_vpn}' failed! - error details: " + str(
+                response.json()))
+
+    return response.text
+
+def add_publish_topic_exception(semp_token : str, broker_hostname : str, broker_msg_vpn : str, acl_profile : str, topic_exception : str):
+    url = f"https://{broker_hostname}/SEMP/v2/config/msgVpns/{broker_msg_vpn}/aclProfiles/{acl_profile}/publishTopicExceptions"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {semp_token}"
+    }
+    payload = {
+        "publishTopicExceptionSyntax": "smf",
+        "publishTopicException": f"{topic_exception}"
+    }
+
+    logger.info(f"Adding publishTopicExceptions to ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}'")
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200 and response.status_code != 400:
+        raise Exception(
+            f"Adding publishTopicExceptions to ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}' failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def remove_publish_topic_exception(semp_token : str, broker_hostname : str, broker_msg_vpn : str, acl_profile : str, topic_exception : str):
+    url = f"https://{broker_hostname}/SEMP/v2/config/msgVpns/{broker_msg_vpn}/aclProfiles/{acl_profile}/publishTopicExceptions/smf,{quote_plus(topic_exception)}"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {semp_token}"
+    }
+
+    logger.info(f"Removing publishTopicExceptions from ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}'")
+    response = requests.delete(url, headers=headers)
+    if response.status_code != 200 and response.status_code != 400:
+        raise Exception(
+            f"Removing publishTopicExceptions from ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}' failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def add_subscribe_topic_exception(semp_token : str, broker_hostname : str, broker_msg_vpn : str, acl_profile : str, topic_exception : str):
+    url = f"https://{broker_hostname}/SEMP/v2/config/msgVpns/{broker_msg_vpn}/aclProfiles/{acl_profile}/subscribeTopicExceptions"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {semp_token}"
+    }
+    payload = {
+        "subscribeTopicExceptionSyntax": "smf",
+        "subscribeTopicException": f"{topic_exception}"
+    }
+
+    logger.info(f"Adding subscribeTopicException to ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}'")
+    response = requests.post(url, headers=headers, json=payload)
+    if response.status_code != 200 and response.status_code != 400:
+        raise Exception(
+            f"Adding subscribeTopicException to ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}' failed! - error details: " + str(response.json()))
+
+    return response.text
+
+def remove_subscribe_topic_exception(semp_token : str, broker_hostname : str, broker_msg_vpn : str, acl_profile : str, topic_exception : str):
+    url = f"https://{broker_hostname}/SEMP/v2/config/msgVpns/{broker_msg_vpn}/aclProfiles/{acl_profile}/subscribeTopicExceptions/smf,{quote_plus(topic_exception)}"
+
+    headers = {
+        "accept": "*/*",
+        "authorization": f"Bearer {semp_token}"
+    }
+
+    logger.info(f"Removing subscribeTopicException from ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}'")
+    response = requests.delete(url, headers=headers)
+    if response.status_code != 200 and response.status_code != 400:
+        raise Exception(
+            f"Removing subscribeTopicException from ACL profile: '{acl_profile}', msgVpn: '{broker_msg_vpn}', Exception: '{topic_exception}' failed! - error details: " + str(response.json()))
 
     return response.text

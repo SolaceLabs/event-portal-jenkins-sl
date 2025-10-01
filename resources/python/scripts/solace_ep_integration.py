@@ -2,6 +2,7 @@ import glob
 import json
 import logging
 import re
+from typing import Any
 from urllib.parse import quote, quote_plus
 
 import requests
@@ -39,8 +40,9 @@ class EventPortalApplication:
         self.declaredProducedEventVersionIds: list[str] = []
         self.declaredConsumedEventVersionIds: list[str] = []
         self.declaredConsumedEventVersionIdsWithConsumers: list[str] = []
-        self.producedEventTopics: list[dict[str, any]] = []
-        self.consumedEventTopics: list[dict[str, any]] = []
+        self.producedEventTopics: list[dict[str, Any]] = []
+        self.consumedEventTopics: list[dict[str, Any]] = []
+        self.applicationType: str = None
 
 
     def __str__(self):
@@ -142,7 +144,7 @@ def get_messaging_services(token):
         raise Exception("Getting list of messaging services failed: " + str(response.json()))
     return response.text
 
-def get_application_list_by_name(token, application_name, application):
+def get_application_list_by_name(token: str, application_name: str, application: EventPortalApplication) -> None:
     url = f"https://api.solace.cloud/api/v2/architecture/applications?pageSize=100&pageNumber=1&name={application_name}"
 
     headers = {
@@ -157,12 +159,14 @@ def get_application_list_by_name(token, application_name, application):
     if response.status_code != 200:
         raise Exception(f"Getting Application List by name: {application_name} failed! - error details: " + str(response.json()))
 
+    logger.info(f"Application retrieved: \n{to_pretty_json(response.text)}")
     json_response = json.loads(response.text)
     data = json_response.get('data')
     if data is not None:
         for record in data:
             application.applicationTitle = record.get('name')
             application.applicationId = record.get('id')
+            application.applicationType = record.get('applicationType')
 
             custom_attributes = record.get('customAttributes', [])
             for attribute in custom_attributes:

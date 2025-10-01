@@ -53,7 +53,10 @@ def validate_application_client_profile(token, broker_service_id, application):
     sepi.create_application_client_profile(token, broker_service_id, client_profile_name)
     return None
 
-def validate_application_authorization_group(token, broker_id, application):
+def validate_application_authorization_group(token: str, broker_id: str, application: sepi.EventPortalApplication) -> None:
+    if application.applicationType is not None and application.applicationType == 'restDeliveryPoint':
+        return None
+
     txt_response = sepi.get_application_authorization_group(token, broker_id, application)
     pretty_json = sepi.to_pretty_json(txt_response)
     print(pretty_json)

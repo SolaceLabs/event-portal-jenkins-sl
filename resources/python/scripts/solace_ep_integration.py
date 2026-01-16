@@ -588,7 +588,7 @@ def get_preview_deploy_application_to_runtime(token, broker_id, action, applicat
 
     return response.text
 
-def deploy_application_to_runtime(token, broker_id, action, application):
+def deploy_application_to_runtime(token: str, broker_id: str, action: str, application: EventPortalApplication) -> str:
     url = "https://api.solace.cloud/api/v2/architecture/runtimeManagement/applicationDeployments"
 
     payload = {
@@ -603,6 +603,7 @@ def deploy_application_to_runtime(token, broker_id, action, application):
     }
     logger.info(f"Pushing application: {application.applicationTitle}, version: {application.applicationVersion} - {application.applicationVersionName}, state: {application.applicationState} to Runtime Broker with Id: {broker_id}")
     response = requests.post(url, json=payload, headers=headers, verify=False)
+    logger.info(response.text)
     if response.status_code != 200:
         raise Exception(f"Pushing application: {application.applicationTitle} to Runtime Broker with Id: {broker_id} failed! - error details: " + str(response.json()))
 
@@ -611,8 +612,33 @@ def deploy_application_to_runtime(token, broker_id, action, application):
     data = json_response.get('data')
     if data is not None:
         application.lastChangeRecordId = data.get('changeRecordId')
+        print(f"changeRecordId: {application.lastChangeRecordId}")
 
-    print(f"changeRecordId: {application.lastChangeRecordId}")
+        url = f"https://api.solace.cloud/api/v2/architecture/runtimeManagement/applications/{application.applicationId}/configurationPushJobs?pageSize=100&pageNumber=1&changeRecordIds={application.lastChangeRecordId}"
+
+        response = requests.get(url, headers=headers)
+        logger.info(response.text)
+        if response.status_code != 200:
+            raise Exception(f"Getting the list of push jobs for Application: {application.applicationTitle} to Runtime Broker with Id: {broker_id} failed! - error details: " + str(response.json()))
+
+        job_id: str = ""
+        json_response = json.loads(response.text)
+        data = json_response.get('data')
+        if data is not None:
+            for record in data:
+                job_id = record.get('id')
+
+        logger.info(f"Push Job Id: {job_id}")
+
+        if job_id != "":
+            url = f"https://api.solace.cloud/api/v2/architecture/runtimeManagement/applicationConfigurationPushJobs/{job_id}/run"
+
+            response = requests.post(url, headers=headers)
+
+            if response.status_code != 200:
+                raise Exception(f"Pushing JobId: {job_id} to run for application: {application.applicationTitle} to Runtime Broker with Id: {broker_id} failed! - error details: " + str(response.json()))
+
+    logger.info(response.text)
     return response.text
 
 def get_application_deployment_status(token, broker_id, application):

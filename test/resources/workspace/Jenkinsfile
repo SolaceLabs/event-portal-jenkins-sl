@@ -1,0 +1,22 @@
+@Library('solace-ep-integration')_
+
+import static com.solace.ep.jenkins.Utilities.*
+
+pipeline {
+    environment {
+        ASYNC_API_DIR = 'resources/workspace/async-api'
+    }
+    agent any
+    stages {
+		stage('Push to Solace Broker') {
+			steps {
+				script {
+					createPythonVirtualEnv()
+					activatePythonVirtualEnv()	
+					installPythonDependencies()
+				}
+			}
+		}		
+	}
+
+}

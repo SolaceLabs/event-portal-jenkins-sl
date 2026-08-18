@@ -1,0 +1,9 @@
+#!/usr/bin/env groovy
+
+import com.solace.ep.jenkins.Python
+
+def call() {
+	return new Python(this).getDetailsFromAsyncApiFiles()
+	
+	
+}
